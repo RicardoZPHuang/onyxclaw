@@ -20,11 +20,7 @@ os.environ["E2B_API_URL"] = api_url
 os.environ["E2B_DOMAIN"] = api_domain
 
 sdk_patch = os.environ.get("E2B_SDK_PATCH", "none")
-if sdk_patch == "kruise-agents-private-protocol":
-    from kruise_agents.patch_e2b import patch_e2b
-
-    patch_e2b(https=base_url.scheme == "https")
-elif sdk_patch != "none":
+if sdk_patch != "none":
     raise RuntimeError(f"unsupported E2B_SDK_PATCH: {sdk_patch}")
 from e2b import Sandbox
 from e2b.connection_config import ConnectionConfig

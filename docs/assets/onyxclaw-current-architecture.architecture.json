@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "OnyxClaw 当前架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [1360, 620],
+    "repository": {
+      "url": "https://github.com/KianaBin/onyxclaw.git",
+      "revision": "5f8c0902e7d51c28398cc59e712f8081b0f2bc13"
+    }
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户浏览器",
+      "sublabel": "本地或云端 UI",
+      "pos": [30, 320],
+      "size": [130, 60]
+    },
+    {
+      "id": "v19",
+      "type": "cloud",
+      "label": "稳定 APP v19",
+      "sublabel": "不可变构建基线",
+      "pos": [50, 80],
+      "size": [150, 64],
+      "sources": [
+        { "path": "deploy/huaweicloud-cce/app-v19/Dockerfile", "label": "v19 Dockerfile" }
+      ]
+    },
+    {
+      "id": "v21",
+      "type": "cloud",
+      "label": "APP 聊天补丁 v21",
+      "sublabel": "精确回复关联",
+      "pos": [270, 80],
+      "size": [160, 64],
+      "sources": [
+        { "path": "deploy/huaweicloud-cce/Dockerfile.chat-delivery-v21", "label": "v21 Dockerfile" }
+      ]
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "OnyxClaw APP",
+      "sublabel": "Controller · Simulator · UI",
+      "pos": [270, 320],
+      "size": [170, 68],
+      "sources": [
+        { "path": "packages/cloud-runtime/src/cloud-controller.js", "label": "聊天控制器" }
+      ]
+    },
+    {
+      "id": "openclawBase",
+      "type": "cloud",
+      "label": "干净 OpenClaw 基础镜像",
+      "sublabel": "Gateway · envd · 健康检查",
+      "pos": [500, 80],
+      "size": [180, 64],
+      "sources": [
+        { "path": "deploy/huaweicloud-agentsphere-openclaw/image/Dockerfile", "label": "基础镜像 Dockerfile" }
+      ]
+    },
+    {
+      "id": "channelImage",
+      "type": "cloud",
+      "label": "完整 Channel 镜像",
+      "sublabel": "预装 OnyxClaw Channel",
+      "pos": [720, 80],
+      "size": [170, 64],
+      "sources": [
+        { "path": "deploy/huaweicloud-agentsphere-openclaw/Dockerfile.channel", "label": "Channel Dockerfile" }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "OpenClaw Gateway",
+      "sublabel": "模型调用与工具运行",
+      "pos": [980, 320],
+      "size": [160, 64]
+    },
+    {
+      "id": "channel",
+      "type": "backend",
+      "label": "OnyxClaw Channel",
+      "sublabel": "入站分发 · 出站投递",
+      "pos": [720, 320],
+      "size": [170, 64],
+      "sources": [
+        { "path": "packages/onyxclaw-channel/src/inbound.js", "label": "入站分发" }
+      ]
+    },
+    {
+      "id": "model",
+      "type": "external",
+      "label": "已批准的模型服务",
+      "sublabel": "凭据由运行环境注入",
+      "pos": [1200, 320],
+      "size": [160, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "AgentSphere Sandbox 运行时",
+      "wraps": ["gateway", "channel"],
+      "pad": 32
+    }
+  ],
+  "connections": [
+    { "id": "v19-to-v21", "from": "v19", "to": "v21", "label": "稳定父镜像", "variant": "emphasis" },
+    { "id": "v21-to-app", "from": "v21", "to": "app", "label": "构建 APP 候选", "fromSide": "bottom", "toSide": "top" },
+    { "id": "base-to-channel-image", "from": "openclawBase", "to": "channelImage", "label": "基础镜像", "variant": "emphasis", "labelDy": -26 },
+    { "id": "channel-image-to-runtime", "from": "channelImage", "to": "channel", "label": "预装插件", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "id": "user-to-app", "from": "user", "to": "app", "label": "HTTP UI", "variant": "emphasis" },
+    { "id": "app-to-channel", "from": "app", "to": "channel", "label": "WebSocket：入站 / 出站 inReplyTo", "variant": "emphasis" },
+    { "id": "channel-to-gateway", "from": "channel", "to": "gateway", "label": "dispatchInbound / dispatchReply", "labelDy": -26 },
+    { "id": "gateway-to-model", "from": "gateway", "to": "model", "label": "模型请求" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "构建边界",
+      "items": [
+        "v19 是稳定 APP 基线，v21 是明确派生补丁",
+        "完整 Channel 从干净 OpenClaw 基础镜像构建"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "聊天交付",
+      "items": [
+        "APP 先登记回复关联，再发送入站事件",
+        "Channel 以 inReplyTo 将回复交还给对应请求"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "部署边界",
+      "items": [
+        "本仓维护镜像构建与更新",
+        "实际部署操作由 onyxclaw-one-click 维护"
+      ]
+    }
+  ]
+}

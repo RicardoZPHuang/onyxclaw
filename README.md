@@ -1,101 +1,42 @@
 # OnyxClaw
 
-OnyxClaw is a local OpenClaw Channel harness and Phase 1 browser console. Its
-current macOS mode uses an already installed OpenClaw and does not create a
-Sandbox.
+> 状态：**当前入口**。实现行为以代码与回归测试为准；本文只导航当前规范、当前指南和历史证据。
 
-Current implementation:
+OnyxClaw 提供 OpenClaw Channel、APP/BFF 编排与本地验证工具。受支持的云端组合为
+Huawei Cloud CCE 承载 APP、AgentSphere 提供 Sandbox；本仓只维护 APP 与 Channel 两类镜像
+的构建输入和更新方案。实际部署操作由
+[onyxclaw-one-click](https://github.com/KianaBin/onyxclaw-one-click) 维护。
 
-- minimal OpenClaw Channel Plugin;
-- WebSocket Channel Platform Simulator;
-- versioned inbound/outbound protocol;
-- bootstrap registration, session reconnect, heartbeat, delivery receipt, and event deduplication;
-- OpenClaw inbound dispatch and outbound reply delivery;
-- local macOS E2E runner covering two message rounds, Gateway restart, token
-  rotation, temporary `SOUL.md` verification, cleanup, and JSON reports.
-- loopback-only Phase 1 UI for local Channel lifecycle, `SOUL.md` editing, and
-  text chat, enforced as a serial connect → personality confirmation → chat
-  onboarding flow with a one-time personality-based greeting.
-- Alibaba Cloud ACS disposable IaC for VPC, cluster, Agent Sandbox components,
-  an OpenClaw warm pool, derived image bootstrap, and reverse cleanup.
-- tag-driven GitHub Release pipeline that builds the derived `linux/amd64`
-  image once, publishes it to GHCR, and attaches an OCI archive, digest,
-  manifest, and checksums to the matching Release.
+## 快速开始
 
-## Requirements
-
-- Node.js 22.19 or newer;
-- OpenClaw 2026.5.28 or a compatible version;
-- a configured local OpenClaw model provider.
-
-## Development
+前提：Node.js 22.19 或更高版本、已安装并配置模型 Provider 的本机 OpenClaw。
 
 ```bash
 npm install
 npm test
 ```
 
-The WebSocket test binds to loopback and may require local network permission in a sandboxed development environment.
-
-## Local Phase 0
-
-See [docs/phase0-local.md](./docs/phase0-local.md).
+本机验证和浏览器控制台见 [本地开发与验收](./docs/local-development.md)：
 
 ```bash
 npm run phase0:local
-```
-
-Reports are written to `artifacts/phase0-local-<run-id>.json`.
-The runner temporarily restarts the local Gateway and restores the original
-`SOUL.md` before disabling the test Channel.
-
-## Local Phase 1 UI
-
-```bash
 npm run dev
-```
-
-Open `http://127.0.0.1:3000`. This UI operates only on the OpenClaw installed
-on the current Mac. See [docs/phase1-local.md](./docs/phase1-local.md).
-
-With the UI server running, execute the complete local acceptance flow with:
-
-```bash
 npm run phase1:smoke
 ```
 
-Current acceptance status: 96 automated tests plus real macOS Phase 0/Phase 1
-and Alibaba Cloud ACS Sandbox/OpenClaw/Channel runs passing. See the
-[implementation summary](./docs/implementation-summary.md) for the completed
-scope and remaining production boundaries.
+## 当前文档
 
-## Alibaba Cloud ACS IaC
+| 类型 | 文档 | 说明 |
+| --- | --- | --- |
+| 当前规范 | [架构](./docs/architecture.md) | 组件责任、聊天交付、观测与构建边界；附交互式架构图 |
+| 当前指南 | [Huawei Cloud 镜像构建与更新](./docs/huaweicloud-image-build-and-update.md) | APP v19、APP 补丁、OpenClaw 基础镜像和完整 Channel 镜像 |
+| 当前指南 | [Provider 配置](./docs/provider-config.md) | Huawei AgentSphere 的非敏感样例、环境变量和验证边界 |
+| 当前指南 | [本地开发与验收](./docs/local-development.md) | 本机 Phase 0 生命周期回归和 Phase 1 控制台 |
+| 当前参考 | [Cloud APP runtime](./packages/cloud-runtime/README.md) | 云端编排、恢复与数据面语义 |
+| 术语 | [CONTEXT.md](./CONTEXT.md) | 聊天交付、镜像和文档治理术语 |
+| 架构决定 | [ADR](./docs/adr/) | 双镜像发布、Huawei-only 边界和文档治理决定 |
+| 历史证据 | [故障追踪器](./docs/huaweicloud-sandbox-resume-bug-tracker.md) | 已脱敏的诊断结论、时间线与镜像可追溯信息，不是操作指南 |
 
-See [docs/alibaba-acs-design.md](./docs/alibaba-acs-design.md) for the complete
-flow, [the OpenClaw image adaptation guide](./docs/openclaw-image-alibaba-acs-adaptation.md)
-for derived-image changes, and [iac/alicloud-acs/README.md](./iac/alicloud-acs/README.md)
-for commands.
-
-The derived image is released by pushing a SemVer tag such as `v0.1.0`. The
-`Release OpenClaw image` workflow publishes
-`ghcr.io/mahaoalex/onyxclaw-openclaw:<tag>` and records its immutable digest in
-the corresponding GitHub Release. Configure ACS with the `image@sha256:...`
-value from that Release, not with a floating tag.
-
-Current phase baselines are the OpenClaw Sandbox image
-[v0.1.3](https://github.com/MahaoAlex/onyxclaw/releases/tag/v0.1.3) and the cloud
-APP image [app-v0.3.6](https://github.com/MahaoAlex/onyxclaw/releases/tag/app-v0.3.6).
-The APP Release also contains a Docker-loadable `linux/amd64` tar.gz archive,
-manifest, immutable image reference, and checksums.
-
-## Design
-
-- [Initial requirements](./docs/init.md)
-- [Cloud validation proposal](./docs/proposal.md)
-- [Cloud provider configuration](./docs/provider-config.md)
-- [Cloud Sandbox Provider onboarding guide](./docs/cloud-sandbox-provider-onboarding.md)
-- [Huawei Cloud CCE and AgentSphere deployment](./docs/huaweicloud-agentsphere-cce-deployment.md)
-- [Alibaba Cloud ACS Agent Sandbox design](./docs/alibaba-acs-design.md)
-- [OpenClaw image adaptation for Alibaba Cloud ACS](./docs/openclaw-image-alibaba-acs-adaptation.md)
-- [Alibaba Cloud ACS OpenClaw bootstrap config](./docs/alibaba-acs-bootstrap-config.md)
-- [Current implementation summary](./docs/implementation-summary.md)
+非敏感配置结构见
+[`config/providers.huaweicloud-agentsphere.example.json`](./config/providers.huaweicloud-agentsphere.example.json)
+和 [`.env.example`](./.env.example)。真实 endpoint、Template/SFS 标识和所有凭据不进入仓库。

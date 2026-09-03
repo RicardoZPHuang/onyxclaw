@@ -40,6 +40,7 @@ export class WsPlatformSimulator {
   #connectionWaiters = new Map();
   #outboundWaiters = new Map();
   #outboundReplyWaiters = new Map();
+  #replyWaiters = new Map();
   #nextOutboundWaiters = [];
   #unconsumedOutbound = [];
 
@@ -73,6 +74,7 @@ export class WsPlatformSimulator {
     this.#connectionWaiters.delete(instanceId);
     for (const waiter of this.#outboundWaiters.values()) waiter.reject(resetError);
     this.#outboundWaiters.clear();
+    this.#rejectReplyWaitersForInstance(instanceId, resetError);
     for (const waiter of this.#nextOutboundWaiters) waiter.reject(resetError);
     this.#nextOutboundWaiters.length = 0;
     this.#unconsumedOutbound = this.#unconsumedOutbound.filter(
@@ -148,6 +150,42 @@ export class WsPlatformSimulator {
     }
   }
 
+  waitForReply(instanceId, inReplyTo, timeoutMs = 120_000) {
+    const existingIndex = this.#unconsumedOutbound.findIndex(
+      (event) => event.instanceId === instanceId && event.payload.inReplyTo === inReplyTo,
+    );
+    if (existingIndex >= 0) return Promise.resolve(this.#unconsumedOutbound.splice(existingIndex, 1)[0]);
+    const key = this.#replyKey(instanceId, inReplyTo);
+    if (this.#replyWaiters.has(key)) {
+      return Promise.reject(new Error(`already waiting for reply to ${inReplyTo}`));
+    }
+    const waiter = deferred(timeoutMs, `reply to ${inReplyTo}`);
+    this.#replyWaiters.set(key, waiter);
+    return waiter.promise.finally(() => {
+      if (this.#replyWaiters.get(key) === waiter) this.#replyWaiters.delete(key);
+    });
+  }
+
+  cancelReply(instanceId, inReplyTo, error) {
+    const key = this.#replyKey(instanceId, inReplyTo);
+    const waiter = this.#replyWaiters.get(key);
+    if (!waiter) return;
+    this.#replyWaiters.delete(key);
+    waiter.reject(error);
+  }
+
+  #replyKey(instanceId, inReplyTo) {
+    return `${instanceId}\u0000${inReplyTo}`;
+  }
+
+  #rejectReplyWaitersForInstance(instanceId, error) {
+    for (const [key, waiter] of this.#replyWaiters) {
+      if (!key.startsWith(`${instanceId}\u0000`)) continue;
+      this.#replyWaiters.delete(key);
+      waiter.reject(error);
+    }
+  }
+
   #handleConnection(socket) {
     let sessionToken;
     socket.on("message", (data) => {
@@ -213,9 +251,18 @@ export class WsPlatformSimulator {
           this.#outboundWaiters.delete(event.eventId);
           const replyWaiter = this.#outboundReplyWaiters.get(event.payload.inReplyTo);
           if (replyWaiter) { replyWaiter.resolve(event); this.#outboundReplyWaiters.delete(event.payload.inReplyTo); }
-          const nextWaiter = this.#nextOutboundWaiters.shift();
-          if (nextWaiter) nextWaiter.resolve(event);
-          else this.#unconsumedOutbound.push(event);
+          const correlatedReplyWaiter = this.#replyWaiters.get(
+            this.#replyKey(event.instanceId, event.payload.inReplyTo),
+          );
+          if (correlatedReplyWaiter) {
+            correlatedReplyWaiter.resolve(event);
+            this.#replyWaiters.delete(this.#replyKey(event.instanceId, event.payload.inReplyTo));
+          }
+          if (!replyWaiter && !correlatedReplyWaiter) {
+            const nextWaiter = this.#nextOutboundWaiters.shift();
+            if (nextWaiter) nextWaiter.resolve(event);
+            else this.#unconsumedOutbound.push(event);
+          }
         }
       } catch (error) {
         debugChat("protocol_error", { errorName: error?.name ?? "Error" });
@@ -227,6 +274,10 @@ export class WsPlatformSimulator {
         if (connection.socket === socket) {
           debugChat("channel_closed", { instanceId, connectionId: connection.connectionId, code });
           this.#connections.delete(instanceId);
+          this.#rejectReplyWaitersForInstance(
+            instanceId,
+            new Error(`channel connection for ${instanceId} closed`),
+          );
         }
       }
     });

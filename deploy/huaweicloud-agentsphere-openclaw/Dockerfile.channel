@@ -1,0 +1,23 @@
+# Build from the clean AgentSphere-ready OpenClaw image made from image/Dockerfile.
+# Pass a local tag or an immutable digest with --build-arg; this default never
+# selects a registry or deployment environment by itself.
+ARG OPENCLAW_AGENTSPHERE_IMAGE=onyxclaw-openclaw-agentsphere:local
+FROM ${OPENCLAW_AGENTSPHERE_IMAGE}
+
+USER root
+
+# The plugin is self-contained except for its OpenClaw peer dependency. The
+# base image already owns OpenClaw at /app, so link that exact runtime instead
+# of downloading a second copy while installing the plugin's production deps.
+COPY --chown=node:node packages/onyxclaw-channel /opt/onyxclaw/channel
+COPY --chown=node:node deploy/huaweicloud-agentsphere-openclaw/openclaw.with-channel.default.json /opt/openclaw/openclaw.default.json
+
+RUN test -f /app/openclaw.mjs \
+    && node -e 'const pkg = require("/app/package.json"); if (pkg.name !== "openclaw") process.exit(1)' \
+    && cd /opt/onyxclaw/channel \
+    && npm ci --omit=dev --ignore-scripts --legacy-peer-deps \
+    && ln -s /app node_modules/openclaw \
+    && chown -R node:node /opt/onyxclaw/channel
+
+WORKDIR /app
+USER node

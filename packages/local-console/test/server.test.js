@@ -103,12 +103,12 @@ test("UI config exposes safe runtime identity without provider secrets", async (
     port: 0,
     uiConfig: {
       deploymentMode: "cloud",
-      providerId: "alicloud-acs",
-      providerName: "Alibaba Cloud ACS Agent Sandbox",
-      region: "cn-hangzhou",
-      templateId: "onyxclaw",
+      providerId: "huaweicloud-agentsphere",
+      providerName: "Huawei Cloud AgentSphere Sandbox",
+      region: "cn-south-1",
+      templateId: "agentsphere-template",
       gatewayPort: 18789,
-      e2bHost: "sandbox-manager.sandbox-system.svc.cluster.local:7788",
+      e2bHost: "agentsphere.example.internal",
       protocol: "e2b-compatible",
       capabilities: {
         pauseResume: true,
@@ -125,12 +125,12 @@ test("UI config exposes safe runtime identity without provider secrets", async (
 
   assert.deepEqual(config, {
     deploymentMode: "cloud",
-    providerId: "alicloud-acs",
-    providerName: "Alibaba Cloud ACS Agent Sandbox",
-    region: "cn-hangzhou",
-    templateId: "onyxclaw",
+    providerId: "huaweicloud-agentsphere",
+    providerName: "Huawei Cloud AgentSphere Sandbox",
+    region: "cn-south-1",
+    templateId: "agentsphere-template",
     gatewayPort: 18789,
-    e2bHost: "sandbox-manager.sandbox-system.svc.cluster.local:7788",
+    e2bHost: "agentsphere.example.internal",
     protocol: "e2b-compatible",
     capabilities: {
       pauseResume: true,
@@ -371,6 +371,8 @@ test("web UI exposes a single reset button, full-width architecture, and 5-colum
   assert.match(browserApp, /function beginNewUiSession/);
   assert.match(browserApp, /uiSessionAbortController\.abort\(\)/);
   assert.match(browserApp, /generation !== uiSessionGeneration/);
+  assert.match(browserApp, /const chatReady = connected && status\.soulConfirmed && !helloLoading/);
+  assert.match(browserApp, /if \(!text \|\| helloLoading\) return/);
   assert.match(browserApp, /async function enterLobsterMode/);
   assert.match(browserApp, /clearApiCallsUi/);
   assert.match(browserApp, /resolveTabState/);

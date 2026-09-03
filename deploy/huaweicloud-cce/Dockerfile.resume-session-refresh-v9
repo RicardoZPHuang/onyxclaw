@@ -1,7 +1,0 @@
-ARG APP_IMAGE=swr.cn-south-1.myhuaweicloud.com/demo-test/onyxclaw-app:0.3.8-resume-no-sfs-soul-v8@sha256:e9e69bc35658ce94217907b9efb145e492334be825bb83072df8e99aba8adf36
-FROM ${APP_IMAGE}
-
-USER root
-COPY packages/cloud-runtime/src/e2b-bridge.py /app/packages/cloud-runtime/src/e2b-bridge.py
-RUN chown node:node /app/packages/cloud-runtime/src/e2b-bridge.py
-USER node

@@ -2,7 +2,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "deepseek/deepseek-v4-flash"
+        "primary": "<model-provider>/<approved-model-id>"
       },
       "workspace": "/home/node/.openclaw/workspace"
     }
@@ -10,14 +10,14 @@
   "models": {
     "mode": "merge",
     "providers": {
-      "deepseek": {
-        "baseUrl": "https://api.deepseek.com",
+      "<model-provider>": {
+        "baseUrl": "https://<model-api-endpoint>",
         "apiKey": "__ONYXCLAW_MODEL_API_KEY__",
         "api": "openai-completions",
         "models": [
           {
-            "id": "deepseek-v4-flash",
-            "name": "DeepSeek V4 Flash"
+            "id": "<approved-model-id>",
+            "name": "<approved-model-name>"
           }
         ]
       }
@@ -27,7 +27,7 @@
     "mode": "local",
     "auth": {
       "mode": "token",
-      "token": "replace-with-a-random-gateway-token"
+      "token": "__ONYXCLAW_OPENCLAW_GATEWAY_TOKEN__"
     }
   }
 }

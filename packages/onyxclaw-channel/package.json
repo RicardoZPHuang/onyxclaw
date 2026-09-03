@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "ws": "^8.21.0"
+    "ws": "8.21.0"
   },
   "peerDependencies": {
     "openclaw": ">=2026.5.28"

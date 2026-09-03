@@ -57,7 +57,7 @@ test("maps the adapter client contract to a long-lived Python JSON bridge", asyn
     baseUrl: "http://sandbox-manager.sandbox-system.svc.cluster.local:7788",
     sandboxUrl: "http://envd-gateway.sandbox-system.svc.cluster.local:49983",
     requestTimeoutMs: 30_000,
-    sdkPatch: "kruise-agents-private-protocol",
+    sdkPatch: "none",
   });
   const session = await client.create({ template: "onyxclaw", timeoutSeconds: 300 });
 
@@ -84,7 +84,7 @@ test("maps the adapter client contract to a long-lived Python JSON bridge", asyn
   );
   assert.equal(
     fake.calls[0].options.env.E2B_SDK_PATCH,
-    "kruise-agents-private-protocol",
+    "none",
   );
   assert.equal(fake.calls[0].options.env.E2B_DATA_SESSION_WAIT_SECONDS, "5");
   assert.doesNotMatch(JSON.stringify(fake.requests), /runtime-secret/);

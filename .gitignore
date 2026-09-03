@@ -13,3 +13,4 @@ config/providers.local.json
 *.swp
 .DS_Store
 .claude/
+tmp/

@@ -175,10 +175,56 @@ test("concurrent chat replies are matched to their inbound event", async (t) => 
   ]);
 
   assert.equal(first.status, "rejected");
-  assert.match(first.reason.message, /outbound reply to inbound event in-first/);
+  assert.match(first.reason.message, /reply to in-first/);
   assert.equal(second.status, "fulfilled");
   assert.equal(second.value.inboundEventId, "in-second");
   assert.equal(second.value.text, "reply to second");
+});
+
+test("registers each reply waiter before sending concurrent inbound events", async () => {
+  const eventIds = ["in-slow", "in-fast"];
+  const replyWaiters = new Map();
+  const sent = [];
+  const controller = new CloudConsoleController({
+    adapter: { async connectSandbox() {} },
+    saga: { async bootstrapSandbox() { return { connectionId: "connection-1" }; } },
+    simulator: {
+      waitForReply(instanceId, eventId) {
+        assert.equal(instanceId, "saved-claw");
+        return new Promise((resolve) => replyWaiters.set(eventId, resolve));
+      },
+      cancelReply(eventId, error) {
+        replyWaiters.get(eventId)?.(Promise.reject(error));
+      },
+      sendInbound(_instanceId, event) {
+        assert.equal(replyWaiters.has(event.eventId), true, "waiter must exist before send");
+        sent.push(event.eventId);
+        if (event.eventId !== "in-fast") return;
+        queueMicrotask(() => {
+          replyWaiters.get("in-fast")({
+            eventId: "out-fast",
+            payload: { text: "fast reply", inReplyTo: "in-fast" },
+          });
+          replyWaiters.get("in-slow")({
+            eventId: "out-slow",
+            payload: { text: "slow reply", inReplyTo: "in-slow" },
+          });
+        });
+      },
+    },
+    buildConfig: () => ({}),
+    eventIdFactory: () => eventIds.shift(),
+  });
+  await controller.startLobsterMode({ sandboxId: "sandbox-1", instanceId: "saved-claw" });
+
+  const [slow, fast] = await Promise.all([
+    controller.sendMessage("slow"),
+    controller.sendMessage("fast"),
+  ]);
+
+  assert.deepEqual(sent, ["in-slow", "in-fast"]);
+  assert.equal(slow.outboundEventId, "out-slow");
+  assert.equal(fast.outboundEventId, "out-fast");
 });
 
 test("resume starts OpenClaw before loading the persistent SFS personality", async () => {

@@ -1,3 +1,0 @@
-e2b==2.24.0
-e2b-code-interpreter==2.7.0
-kruise-agents @ git+https://github.com/openkruise/agents.git@ef43b4b644ff47d86670ddfebbe73de41e4e4c8f#subdirectory=sdk/customized_e2b

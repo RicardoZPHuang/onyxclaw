@@ -1,5 +1,7 @@
 # Cloud APP runtime
 
+> 状态：**当前参考**。本文件说明云端 APP/BFF 的实现语义；行为冲突时，以本包代码和 `npm run test:cloud` 的回归测试为准。
+
 该包承载云端 APP/BFF 的厂商适配与 OpenClaw 创建编排，不依赖本机 macOS Driver。
 
 当前包含：
@@ -12,7 +14,7 @@
   token、重写非持久化 `openclaw.json` 以启动 OpenClaw，再读取 SFS 挂载目录中的
   `workspace/SOUL.md` 并展示给用户确认；确认后写回 SOUL 并等待 Gateway 和 Channel 就绪；
 - 分阶段错误、Secret 脱敏和失败补偿清理；
-- `config/providers.alicloud.example.json`：ACS VPC 内 Private Protocol 配置示例。
+- `config/providers.huaweicloud-agentsphere.example.json`：Huawei AgentSphere 私网配置示例。
 
 运行云端单元测试：
 
@@ -23,10 +25,9 @@ npm run test:cloud
 `E2BCompatibleAdapter` 通过 `clientFactory` 接收底层 E2B Client，使业务编排不绑定 SDK
 或具体云厂商。失败调用会向 stderr 输出脱敏后的 JSON 日志，包括 Provider、API、
 阶段、异常类型、状态码和云端 request ID；同一份安全错误摘要也会显示在观测面板中。
-下一实现切片是提供基于阿里云支持版本
-`e2b==2.24.0 + e2b-code-interpreter==2.7.0 + kruise-agents patch` 的运行时 Client Bridge，
-随后将 Saga 接到云端 BFF API。真实 API Key 只从 Provider Registry 的环境变量映射进入，
-不能写入 JSON 配置、浏览器状态或日志。
+运行时 Client Bridge 通过标准 E2B-compatible 接口访问 AgentSphere，并由 Adapter 统一封装
+SDK 调用。真实 API Key 只从 Provider Registry 的环境变量映射进入，不能写入 JSON 配置、
+浏览器状态或日志。
 
 APP 为每个 Sandbox 生成独立的配置对象，直接写入
 `${homeDir}/.openclaw/openclaw.json`。workspace 路径来自 Provider Profile，可以通过

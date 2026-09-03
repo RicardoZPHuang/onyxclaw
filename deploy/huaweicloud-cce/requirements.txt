@@ -1,0 +1,3 @@
+# Cloud APP runtime imports only the E2B-compatible SDK through e2b-bridge.py.
+# Keep this pin aligned with the tested AgentSphere routing contract.
+e2b==2.24.0

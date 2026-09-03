@@ -153,7 +153,7 @@ test("rejects unknown provider-specific SDK patches", async (t) => {
 
   await assert.rejects(
     fixture(t, config),
-    /api\.sdkPatch must be none or kruise-agents-private-protocol/,
+    /api\.sdkPatch must be none/,
   );
 });
 
@@ -187,42 +187,45 @@ test("rejects an unknown selected provider", async (t) => {
   );
 });
 
-test("committed provider example remains valid and references external secrets", async () => {
+test("committed Huawei Provider example remains valid and references external secrets", async () => {
   const repositoryRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../..",
   );
   const registry = await loadProviderRegistry({
-    configPath: path.join(repositoryRoot, "config", "providers.example.json"),
+    configPath: path.join(repositoryRoot, "config", "providers.huaweicloud-agentsphere.example.json"),
     env: {
-      VENDOR_A_E2B_API_KEY: "test-only",
-      VENDOR_A_MODEL_API_KEY: "test-only",
-      VENDOR_A_CHANNEL_SIGNING_SECRET: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_E2B_API_KEY: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_MODEL_API_KEY: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_CHANNEL_SIGNING_SECRET: "test-only",
     },
   });
 
-  assert.equal(registry.defaultProviderId, "vendor-a");
+  assert.equal(registry.defaultProviderId, "huaweicloud-agentsphere");
   assert.equal(registry.toPublicSummary().providers.length, 1);
   assert.equal(registry.getSecrets().channelSigningSecret, "test-only");
 });
 
-test("committed Alibaba ACS provider uses private endpoints and node paths", async () => {
+test("committed Huawei AgentSphere provider uses placeholder endpoints and node paths", async () => {
   const repositoryRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../..",
   );
   const registry = await loadProviderRegistry({
-    configPath: path.join(repositoryRoot, "config", "providers.alicloud.example.json"),
+    configPath: path.join(repositoryRoot, "config", "providers.huaweicloud-agentsphere.example.json"),
     env: {
-      ALICLOUD_ACS_E2B_API_KEY: "test-only",
-      ALICLOUD_ACS_MODEL_API_KEY: "test-only",
-      ALICLOUD_ACS_CHANNEL_SIGNING_SECRET: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_E2B_API_KEY: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_MODEL_API_KEY: "test-only",
+      HUAWEICLOUD_AGENTSPHERE_CHANNEL_SIGNING_SECRET: "test-only",
     },
   });
-  const provider = registry.getProvider("alicloud-acs");
+  const provider = registry.getProvider("huaweicloud-agentsphere");
 
   assert.equal(provider.api.privateNetworkOnly, true);
-  assert.equal(provider.sandbox.templateId, "onyxclaw");
+  assert.equal(provider.api.baseUrl, "https://agentsphere-control-plane.example.invalid");
+  assert.equal(provider.api.sandboxUrl, "https://agentsphere-sandbox-gateway.example.invalid");
+  assert.equal(provider.channel.publicUrl, "wss://onyxclaw-channel.example.invalid/connect");
+  assert.equal(provider.sandbox.templateId, "<agentsphere-template-id>");
   assert.equal(provider.sandbox.defaultUser, "node");
   assert.equal(provider.sandbox.workspaceDir, "/home/node/.openclaw/workspace");
   assert.equal(provider.openclaw.pluginInstallMode, "preinstalled");

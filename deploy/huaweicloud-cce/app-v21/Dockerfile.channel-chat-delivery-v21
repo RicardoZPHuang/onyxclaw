@@ -1,0 +1,6 @@
+ARG OPENCLAW_IMAGE=swr.cn-south-1.myhuaweicloud.com/demo-test/onyxclaw-openclaw@sha256:d29c37290298d374dd6438ae92ee2def3dadf9e1f7599704f341483c302442b5
+FROM ${OPENCLAW_IMAGE}
+
+USER root
+COPY packages/onyxclaw-channel/src/inbound.js /opt/onyxclaw/channel/src/inbound.js
+RUN chown node:node /opt/onyxclaw/channel/src/inbound.js

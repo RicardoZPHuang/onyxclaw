@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "defaultProvider": "huaweicloud-agentsphere",
+  "providers": {
+    "huaweicloud-agentsphere": {
+      "displayName": "Huawei Cloud AgentSphere Sandbox",
+      "protocol": "e2b-compatible",
+      "api": {
+        "baseUrl": "https://agentsphere-control-plane.example.invalid",
+        "sandboxUrl": "https://agentsphere-sandbox-gateway.example.invalid",
+        "privateNetworkOnly": true,
+        "apiKeyEnv": "HUAWEICLOUD_AGENTSPHERE_E2B_API_KEY",
+        "compatibilityVersion": "agentsphere-e2b-poc",
+        "sdkPatch": "none",
+        "requestTimeoutMs": 60000
+      },
+      "sandbox": {
+        "templateId": "<agentsphere-template-id>",
+        "timeoutMs": 3600000,
+        "onTimeout": "pause",
+        "secure": true,
+        "defaultUser": "node",
+        "homeDir": "/home/node",
+        "workspaceDir": "/home/node/.openclaw/workspace",
+        "metadata": {
+          "agentsandbox.storage.sfs": "{\"sfsTurboMounts\":[{\"sfsTurboId\":\"<sfs-turbo-id>\",\"sharePath\":\"<sfs-share-path>\",\"readOnly\":false,\"mountDir\":\"/home/node/.openclaw/workspace\"}]}"
+        }
+      },
+      "openclaw": {
+        "binary": "node /app/openclaw.mjs",
+        "gatewayPort": 18789,
+        "installMode": "preinstalled",
+        "pluginInstallMode": "preinstalled"
+      },
+      "channel": {
+        "publicUrl": "wss://onyxclaw-channel.example.invalid/connect",
+        "privateNetworkOnly": true,
+        "connectTimeoutMs": 120000,
+        "signingSecretEnv": "HUAWEICLOUD_AGENTSPHERE_CHANNEL_SIGNING_SECRET"
+      },
+      "model": {
+        "provider": "deepseek",
+        "model": "<approved-model-id>",
+        "apiKeyEnv": "HUAWEICLOUD_AGENTSPHERE_MODEL_API_KEY"
+      },
+      "cleanupPolicy": "kill",
+      "capabilities": {
+        "pauseResume": true,
+        "memoryPersistence": true,
+        "publicEgress": false,
+        "vpc": true
+      }
+    }
+  }
+}

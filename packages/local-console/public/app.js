@@ -158,7 +158,7 @@ function renderStatus(status) {
   elements.statusText.textContent = labels[status.mode] ?? status.mode;
   const connected = status.mode === "connected";
   const allocated = status.mode === "allocated";
-  const chatReady = connected && status.soulConfirmed;
+  const chatReady = connected && status.soulConfirmed && !helloLoading;
   const busy = ["starting", "pausing", "resuming"].includes(status.mode);
   const pauseResume = uiConfig.deploymentMode === "cloud" &&
     uiConfig.capabilities?.pauseResume === true;
@@ -408,6 +408,8 @@ async function ensureHello() {
   if (helloShown || helloLoading) return;
   const generation = uiSessionGeneration;
   helloLoading = true;
+  elements.chatInput.disabled = true;
+  elements.send.disabled = true;
   elements.chatState.textContent = "龙虾正在准备第一声问候…";
   try {
     const hello = await api("/api/chat/hello", { method: "POST" });
@@ -424,6 +426,8 @@ async function ensureHello() {
   } finally {
     if (generation !== uiSessionGeneration) return;
     helloLoading = false;
+    elements.chatInput.disabled = false;
+    elements.send.disabled = false;
     elements.chatState.textContent = "已连接 · 可以发送";
   }
 }
@@ -594,7 +598,7 @@ elements.restoreSoul.addEventListener("click", async () => {
 elements.chatForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = elements.chatInput.value.trim();
-  if (!text) return;
+  if (!text || helloLoading) return;
   const generation = uiSessionGeneration;
   elements.chatInput.value = "";
   elements.chatInput.disabled = true;

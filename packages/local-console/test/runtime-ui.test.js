@@ -13,10 +13,10 @@ test("local presentation keeps macOS copy and identity", () => {
 test("cloud presentation identifies the configured provider and reflects the single-tenant copy", () => {
   assert.deepEqual(runtimePresentation({
     deploymentMode: "cloud",
-    providerId: "alicloud-acs",
-    providerName: "Alibaba Cloud ACS Agent Sandbox",
+    providerId: "huaweicloud-agentsphere",
+    providerName: "Huawei Cloud AgentSphere Sandbox",
   }), {
-    environmentLabel: "ALIBABA CLOUD ACS · CLOUD",
+    environmentLabel: "HUAWEI CLOUD AGENTSPHERE SANDBOX · CLOUD",
     modeCopy: "系统同时只存在一个客户。点击右上「重置新用户」即开始新会话（云端会自动释放 Sandbox）。",
   });
 });
@@ -26,17 +26,17 @@ test("cloudProviderPresentation returns null locally and projects safe provider 
   assert.equal(cloudProviderPresentation({ deploymentMode: "cloud" }), null);
   assert.deepEqual(cloudProviderPresentation({
     deploymentMode: "cloud",
-    region: "cn-hangzhou",
-    templateId: "onyxclaw",
+    region: "cn-south-1",
+    templateId: "agentsphere-template",
     gatewayPort: 18789,
-    e2bHost: "sandbox-manager.sandbox-system.svc.cluster.local:7788",
+    e2bHost: "agentsphere.example.internal",
     protocol: "e2b-compatible",
     capabilities: { pauseResume: true, memoryPersistence: true, publicEgress: true, vpc: true },
   }), {
-    region: "cn-hangzhou",
-    templateId: "onyxclaw",
+    region: "cn-south-1",
+    templateId: "agentsphere-template",
     gatewayPort: 18789,
-    e2bHost: "sandbox-manager.sandbox-system.svc.cluster.local:7788",
+    e2bHost: "agentsphere.example.internal",
     protocol: "e2b-compatible",
     capabilities: { pauseResume: true, memoryPersistence: true, publicEgress: true, vpc: true },
   });

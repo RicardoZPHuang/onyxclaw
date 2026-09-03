@@ -19,7 +19,7 @@ const repositoryRoot = path.resolve(
   "../../..",
 );
 const providerConfigPath = process.env.ONYXCLAW_PROVIDER_CONFIG ??
-  path.join(repositoryRoot, "config/providers.alicloud.example.json");
+  path.join(repositoryRoot, "config/providers.huaweicloud-agentsphere.example.json");
 const baseConfigSource = process.env.ONYXCLAW_OPENCLAW_BASE_CONFIG_JSON;
 if (!baseConfigSource) throw new Error("ONYXCLAW_OPENCLAW_BASE_CONFIG_JSON is required");
 const baseConfig = JSON.parse(baseConfigSource);
@@ -83,7 +83,7 @@ const app = createLocalConsoleServer({
     deploymentMode: "cloud",
     providerId,
     providerName: provider.displayName,
-    region: process.env.ONYXCLAW_CLOUD_REGION || process.env.ALIBABA_CLOUD_REGION || null,
+    region: process.env.ONYXCLAW_CLOUD_REGION || null,
     templateId: provider.sandbox?.templateId ?? null,
     gatewayPort: provider.openclaw?.gatewayPort ?? null,
     e2bHost: (() => {

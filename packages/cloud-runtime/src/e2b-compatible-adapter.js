@@ -301,8 +301,3 @@ export function createE2BCompatibleAdapter({
     logger,
   });
 }
-
-// Compatibility aliases for existing integrations. New code should use the
-// provider-neutral names above.
-export const AlibabaAcsAdapter = E2BCompatibleAdapter;
-export const createAlibabaAcsAdapter = createE2BCompatibleAdapter;

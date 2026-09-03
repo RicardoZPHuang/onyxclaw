@@ -104,6 +104,50 @@ test("plugin transport reconnects with its session and handles a second message"
   assert.equal(transport.status, "connected");
 });
 
+test("simulator correlates concurrent replies even when they arrive out of order", async (t) => {
+  const simulator = new WsPlatformSimulator({ port: 0 });
+  await simulator.start();
+  t.after(() => simulator.stop());
+  simulator.issueBootstrapToken("local-mac", "bootstrap-secret");
+
+  const transport = new OnyxclawTransport({
+    platformUrl: simulator.url,
+    instanceId: "local-mac",
+    accountId: "default",
+    bootstrapToken: "bootstrap-secret",
+    pluginVersion: "0.1.0",
+    onInbound: async (event, connection) => {
+      if (event.eventId === "in-slow") await new Promise((resolve) => setTimeout(resolve, 25));
+      connection.sendOutbound({
+        eventId: `out-${event.eventId}`,
+        chatId: event.payload.chatId,
+        text: `reply-${event.eventId}`,
+        inReplyTo: event.eventId,
+      });
+    },
+  });
+  t.after(() => transport.stop());
+  await transport.start();
+  await simulator.waitForConnection("local-mac");
+
+  const slowReply = simulator.waitForReply("local-mac", "in-slow");
+  const fastReply = simulator.waitForReply("local-mac", "in-fast");
+  for (const eventId of ["in-slow", "in-fast"]) {
+    simulator.sendInbound("local-mac", createInboundMessage({
+      eventId,
+      instanceId: "local-mac",
+      accountId: "default",
+      senderId: "tester",
+      chatId: "phase0",
+      text: eventId,
+    }));
+  }
+
+  const [slow, fast] = await Promise.all([slowReply, fastReply]);
+  assert.equal(slow.payload.text, "reply-in-slow");
+  assert.equal(fast.payload.text, "reply-in-fast");
+});
+
 test("simulator can be stopped and started again for another UI session", async () => {
   const simulator = new WsPlatformSimulator();
 

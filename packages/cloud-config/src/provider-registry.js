@@ -5,7 +5,7 @@ const cleanupPolicies = new Set(["pause", "kill", "keep-running"]);
 const timeoutPolicies = new Set(["pause", "kill"]);
 const installModes = new Set(["preinstalled", "install-at-runtime"]);
 const pluginInstallModes = new Set(["upload-package", "preinstalled"]);
-const sdkPatches = new Set(["none", "kruise-agents-private-protocol"]);
+const sdkPatches = new Set(["none"]);
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -97,7 +97,7 @@ function validateProvider(id, provider) {
   positiveInteger(provider?.api?.requestTimeoutMs, `${id}.api.requestTimeoutMs`, errors);
   if (!sdkPatches.has(provider?.api?.sdkPatch ?? "none")) {
     errors.push(
-      `${id}.api.sdkPatch must be none or kruise-agents-private-protocol`,
+      `${id}.api.sdkPatch must be none`,
     );
   }
 

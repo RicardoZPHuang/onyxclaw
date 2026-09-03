@@ -12,9 +12,6 @@
     "phase1:local": "node packages/local-console/src/index.js",
     "phase1:smoke": "node packages/local-console/src/smoke.js",
     "app:cloud": "node packages/cloud-runtime/src/cloud-app.js",
-    "iac:alicloud:test": "node --test iac/alicloud-acs/test/*.test.js",
-    "iac:alicloud": "node iac/alicloud-acs/scripts/stack.mjs",
-    "iac:alicloud:local": "node --env-file-if-exists=.env.alicloud.local iac/alicloud-acs/scripts/stack.mjs",
     "dev": "npm run phase1:local"
   },
   "engines": {

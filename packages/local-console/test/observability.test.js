@@ -8,7 +8,7 @@ test("monitor records only Sandbox Service API metadata and backend objects", ()
   const monitor = createSandboxServiceMonitor({ now: () => now });
   const callId = monitor.begin({
     api: "Files.write",
-    target: "Alibaba ACS envd",
+    target: "AgentSphere Sandbox envd",
     object: { type: "File", id: "/home/node/.openclaw/bootstrap/SOUL.md", state: "writing" },
     content: "must never be retained",
     command: "must never be retained either",
@@ -22,7 +22,7 @@ test("monitor records only Sandbox Service API metadata and backend objects", ()
     })),
     [{
       api: "Files.write",
-      target: "Alibaba ACS envd",
+      target: "AgentSphere Sandbox envd",
       state: "running",
       durationMs: 125,
       object: {
