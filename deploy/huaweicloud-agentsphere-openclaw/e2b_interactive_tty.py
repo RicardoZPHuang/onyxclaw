@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Create or connect to an interactive shell in an AgentSphere E2B Sandbox.
+"""Connect to an interactive shell in an existing AgentSphere E2B Sandbox.
 
-Template ID and API key can be supplied by command-line option, environment
-variable, or an interactive prompt. The API key prompt does not echo input.
-Press Ctrl-] to close the remote terminal while leaving the Sandbox running.
+The normal invocation needs only a Sandbox ID and fixed Agent Gateway URL.
+Credentials are read from the environment. Press Ctrl-] to close the remote
+terminal while leaving the Sandbox running.
 """
 
 from __future__ import annotations
 
 import argparse
-import getpass
 import os
 import select
 import shutil
@@ -28,10 +27,6 @@ from e2b.connection_config import ConnectionConfig
 
 
 DEFAULT_API_URL = "https://agentsphere.cn-south-1.myhuaweicloud.com"
-DEFAULT_SANDBOX_URL = (
-    "https://agent-gateway-sandbox3-geywmobqmy.agentgateway."
-    "cn-south-1.huaweicloud-agentnetwork.com"
-)
 DETACH_BYTE = b"\x1d"  # Ctrl-]
 
 
@@ -44,27 +39,13 @@ def environment_value(*names: str, default: Optional[str] = None) -> Optional[st
 
 
 def require_inputs(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
-    """Prompt only for values that were not supplied non-interactively."""
-    if not args.sandbox_id and not args.template:
-        if not sys.stdin.isatty():
-            parser.error(
-                "set E2B_SANDBOX_ID/--sandbox-id to connect, or "
-                "E2B_TEMPLATE_ID/--template to create"
-            )
-        args.sandbox_id = input(
-            "Existing Sandbox ID (leave empty to create a new Sandbox): "
-        ).strip()
-        if not args.sandbox_id:
-            args.template = input("Template ID: ").strip()
-            if not args.template:
-                parser.error("Template ID cannot be empty")
-
+    """Require the two routing values and an environment-provided API key."""
+    if not args.sandbox_id:
+        parser.error("provide SANDBOX_ID or set E2B_SANDBOX_ID")
+    if not args.sandbox_url:
+        parser.error("provide SANDBOX_URL or set E2B_SANDBOX_URL")
     if not args.api_key:
-        if not sys.stdin.isatty():
-            parser.error("set E2B_API_KEY or pass --api-key")
-        args.api_key = getpass.getpass("E2B API key (input hidden): ").strip()
-        if not args.api_key:
-            parser.error("E2B API key cannot be empty")
+        parser.error("set E2B_API_KEY before running this script")
 
 
 def terminal_size() -> PtySize:
@@ -85,6 +66,10 @@ def write_terminal_output(event: Any) -> None:
 
 def routed_sandbox(claimed: Sandbox, sandbox_url: str) -> Sandbox:
     """Route envd calls through the fixed Agent Gateway data-plane URL."""
+    parsed = urlparse(sandbox_url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("SANDBOX_URL must be an HTTP(S) URL")
+    sandbox_url = parsed.geturl().rstrip("/")
     original = claimed.connection_config
     headers = original.sandbox_headers.copy()
     if claimed.traffic_access_token:
@@ -128,20 +113,10 @@ def control_options(api_key: str, api_url: str) -> dict[str, Any]:
     }
 
 
-def open_sandbox(args: argparse.Namespace) -> tuple[Sandbox, Sandbox, bool]:
+def open_sandbox(args: argparse.Namespace) -> tuple[Sandbox, Sandbox]:
     options = control_options(args.api_key, args.api_url)
-    if args.sandbox_id:
-        claimed = Sandbox.connect(args.sandbox_id, **options)
-        created = False
-    else:
-        claimed = Sandbox.create(
-            template=args.template,
-            timeout=args.sandbox_timeout,
-            secure=True,
-            **options,
-        )
-        created = True
-    return claimed, routed_sandbox(claimed, args.sandbox_url), created
+    claimed = Sandbox.connect(args.sandbox_id, **options)
+    return claimed, routed_sandbox(claimed, args.sandbox_url)
 
 
 def with_session_retry(
@@ -290,19 +265,22 @@ def build_parser() -> argparse.ArgumentParser:
         description="Interactive AgentSphere E2B Sandbox terminal (Ctrl-] closes the shell)",
     )
     parser.add_argument(
-        "--template",
-        default=environment_value("E2B_TEMPLATE_ID"),
-        help="Template ID; defaults to E2B_TEMPLATE_ID, otherwise prompts",
+        "sandbox_id",
+        nargs="?",
+        default=environment_value("E2B_SANDBOX_ID"),
+        metavar="SANDBOX_ID",
+        help="existing Sandbox ID; defaults to E2B_SANDBOX_ID",
     )
     parser.add_argument(
-        "--sandbox-id",
-        default=environment_value("E2B_SANDBOX_ID"),
-        help="connect an existing Sandbox and open a new PTY; defaults to E2B_SANDBOX_ID",
+        "sandbox_url",
+        nargs="?",
+        default=environment_value("E2B_SANDBOX_URL"),
+        metavar="SANDBOX_URL",
+        help="fixed Agent Gateway URL; defaults to E2B_SANDBOX_URL",
     )
     parser.add_argument("--user", default="root")
-    parser.add_argument("--cwd", default="/home/node")
+    parser.add_argument("--cwd", default="/root")
     parser.add_argument("--shell", default="/bin/bash -li")
-    parser.add_argument("--sandbox-timeout", type=int, default=3600)
     parser.add_argument("--session-retries", type=int, default=5)
     parser.add_argument("--session-retry-interval", type=float, default=2.0)
     parser.add_argument("--command-mode", action="store_true", help="use Commands.run instead of PTY")
@@ -311,14 +289,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--api-url",
         default=environment_value("E2B_API_URL", default=DEFAULT_API_URL),
     )
-    parser.add_argument(
-        "--sandbox-url",
-        default=environment_value("E2B_SANDBOX_URL", default=DEFAULT_SANDBOX_URL),
-    )
-    parser.add_argument(
-        "--api-key",
-        default=environment_value("E2B_API_KEY", "HUAWEICLOUD_AGENTSPHERE_E2B_API_KEY"),
-        help="API key; prefer hidden prompt or E2B_API_KEY over this option",
+    parser.set_defaults(
+        api_key=environment_value("E2B_API_KEY", "HUAWEICLOUD_AGENTSPHERE_E2B_API_KEY"),
     )
     return parser
 
@@ -335,9 +307,8 @@ def main() -> int:
     claimed: Optional[Sandbox] = None
     session: Optional[InteractiveHandle] = None
     try:
-        claimed, sandbox, created = open_sandbox(args)
-        action = "created" if created else "connected"
-        sys.stderr.write(f"Sandbox {action}: {claimed.sandbox_id}\n")
+        claimed, sandbox = open_sandbox(args)
+        sys.stderr.write(f"Sandbox connected: {claimed.sandbox_id}\n")
         session = open_remote_terminal(sandbox, args)
         mode = "command" if args.command_mode else "pty"
         sys.stderr.write(f"New {mode.upper()} opened; press Ctrl-] to close the shell\n")

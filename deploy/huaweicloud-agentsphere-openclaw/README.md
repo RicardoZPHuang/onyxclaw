@@ -2,7 +2,8 @@
 
 本目录用于配套 Huawei Cloud AgentSphere E2B-compatible Sandbox，包含：
 
-- 可交互创建或连接 Sandbox 的 `e2b_interactive_tty.py`；
+- 连接已有 Sandbox 并打开交互终端的 `e2b_interactive_tty.py`；
+- 单独刷新并输出 traffic access token 的 `get_traffic_access_token.py`；
 - 已推送镜像的可复现 Dockerfile、entrypoint 和最小 OpenClaw 配置；
 - 进入 Sandbox 后配置 OpenClaw 模型，以及通过 `18789` 访问基础 API 的方法。
 
@@ -41,7 +42,7 @@ swr.cn-north-4.myhuaweicloud.com/ddn-k8s/ghcr.io/openclaw/openclaw@sha256:6212bd
 
 ## 本地准备
 
-推荐使用 Python 3.10 或更高版本：
+本工具固定使用 `e2b==2.34.0`，该版本要求 Python 3.10 或更高版本：
 
 ```bash
 cd deploy/huaweicloud-agentsphere-openclaw
@@ -50,86 +51,101 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-脚本默认使用华南区域地址：
+Huawei Cloud EulerOS 2.0 节点的系统 Python 3.9 无法安装 E2B 2.34.0。不要直接替换系统 Python；可使用 Python 3.10+ venv，或者在 Python 3.11 容器中运行脚本。节点 `/home/hzp/backup` 已准备：
+
+```text
+Docker image: e2b-sdk-tools:2.34.0
+Interactive launcher: /home/hzp/backup/e2b-interactive-2.34.0.sh
+Token launcher: /home/hzp/backup/e2b-get-traffic-token-2.34.0.sh
+```
+
+节点上使用新版 SDK：
+
+```bash
+cd /home/hzp/backup
+export E2B_API_KEY='<your-e2b-api-key>'
+./e2b-interactive-2.34.0.sh '<sandbox-id>' '<sandbox-url>'
+```
+
+包装脚本会把 API URL、Sandbox URL、Sandbox ID 和 API key 环境变量传入隔离容器，但不会将凭据写入镜像。控制面默认使用华南区域地址：
 
 ```text
 E2B API URL: https://agentsphere.cn-south-1.myhuaweicloud.com
-Sandbox URL: https://agent-gateway-sandbox3-geywmobqmy.agentgateway.cn-south-1.huaweicloud-agentnetwork.com
 ```
 
-可通过 `--api-url`、`--sandbox-url` 或对应环境变量覆盖。
+固定 Agent Gateway URL 通过第二个位置参数传入，也可以提前设置 `E2B_SANDBOX_URL`。控制面地址可通过 `--api-url` 或 `E2B_API_URL` 覆盖。
 
-## 交互创建 Sandbox
+## 连接已有 Sandbox
 
-直接运行脚本时，会先询问是否连接已有 Sandbox。输入 Sandbox ID 时会执行一次 `Sandbox.connect()`，使用 connect 响应中刷新的 `traffic_access_token` 重建 AgentGateway 数据面路由，然后创建一个新的 PTY；留空才会继续询问 Template ID 并创建新 Sandbox。API key 使用隐藏输入，不会回显：
+脚本只负责连接已经存在的 Sandbox。先把 API key 放到环境变量，然后传入 Sandbox ID 和固定 Agent Gateway URL：
 
 ```bash
-python e2b_interactive_tty.py
-```
-
-示例提示：
-
-```text
-Existing Sandbox ID (leave empty to create a new Sandbox):
-Template ID: e32e0402-7772-4960-82cc-c093c3312526
-E2B API key (input hidden):
-Sandbox created: <sandbox-id>
-New PTY opened; press Ctrl-] to close the shell
-```
-
-连接已有 Sandbox 的交互输入示例：
-
-```text
-Existing Sandbox ID (leave empty to create a new Sandbox): <sandbox-id>
-E2B API key (input hidden):
-Sandbox connected: <sandbox-id>
-New PTY opened; press Ctrl-] to close the shell
-```
-
-也可以通过参数指定 Template ID：
-
-```bash
-python e2b_interactive_tty.py \
-  --template e32e0402-7772-4960-82cc-c093c3312526
-```
-
-或者通过环境变量用于自动化：
-
-```bash
-export E2B_TEMPLATE_ID=e32e0402-7772-4960-82cc-c093c3312526
 export E2B_API_KEY='<your-e2b-api-key>'
-python e2b_interactive_tty.py
-```
-
-连接已有 Sandbox 不需要 Template ID，也不需要 PTY PID：
-
-```bash
 python e2b_interactive_tty.py \
-  --sandbox-id '<sandbox-id>'
+  '<sandbox-id>' \
+  'https://<agent-gateway-host>'
 ```
 
-也可以使用环境变量：
+`--cwd` 的默认值已经改为 `/root`，默认用户也是 `root`，所以日常进入 Sandbox 不需要再填写：
+
+```text
+--user root --cwd /root
+```
+
+也可以把两个位置参数放入环境变量，此时命令不再需要参数：
 
 ```bash
 export E2B_SANDBOX_ID='<sandbox-id>'
-export E2B_API_KEY='<your-e2b-api-key>'
+export E2B_SANDBOX_URL='https://<agent-gateway-host>'
 python e2b_interactive_tty.py
 ```
 
-虽然脚本也支持 `--api-key`，但命令行参数可能被 shell history 或进程列表记录，优先使用隐藏输入或环境变量。
+节点上的容器包装脚本使用相同参数：
 
-常用选项：
-
-```text
---sandbox-id <id>          connect 已有 Sandbox、刷新 token 并新建 PTY
---command-mode             使用 Commands.run 的交互模式代替 PTY API
---kill-on-exit             退出脚本时删除 Sandbox
---sandbox-timeout 3600     Sandbox 生命周期，单位为秒
---session-retries 5        Session not found 的重试次数
---session-retry-interval 2 两次重试间隔，单位为秒
+```bash
+cd /home/hzp/backup
+./e2b-interactive-2.34.0.sh '<sandbox-id>' 'https://<agent-gateway-host>'
 ```
 
-在交互终端按 `Ctrl-]` 会关闭当前远程 PTY，但不会删除 Sandbox，避免留下无法再次使用的孤立 shell。下次使用 `--sandbox-id` 时，脚本会通过新的 connect 响应刷新路由凭据并打开一个新 PTY，而不是要求用户保存旧 PTY PID。已有 OpenClaw 配置保存在 Sandbox 文件系统中，不依赖旧 shell 进程。
+常用高级选项：
+
+```text
+--cwd /path                 覆盖默认工作目录 /root
+--user <user>               覆盖默认用户 root
+--command-mode              使用 Commands.run 代替 PTY API
+--kill-on-exit              退出脚本时删除 Sandbox
+--session-retries 5         Session not found 的重试次数
+--session-retry-interval 2  两次重试间隔，单位为秒
+--api-url <url>             覆盖 AgentSphere 控制面地址
+```
+
+脚本执行 `Sandbox.connect()` 获取最新路由凭据，用返回的 `traffic_access_token`、Sandbox ID 和 envd 端口重建固定 Agent Gateway 数据面连接，再创建新的 PTY。不会打印 API key、traffic token 或完整路由 headers。
+
+在交互终端按 `Ctrl-]` 会关闭当前远程 shell，但不会删除 Sandbox。下次用同一个 Sandbox ID 连接时会再次刷新路由凭据并打开新 PTY。
+
+## 单独获取 traffic access token
+
+需要从浏览器代理、curl 或其他程序访问 Sandbox 端口时，可以只刷新 traffic access token：
+
+```bash
+export E2B_API_KEY='<your-e2b-api-key>'
+python get_traffic_access_token.py '<sandbox-id>'
+```
+
+脚本只向 stdout 输出 token，适合直接赋值：
+
+```bash
+TRAFFIC_ACCESS_TOKEN="$(python get_traffic_access_token.py '<sandbox-id>')"
+```
+
+节点上使用配套包装脚本：
+
+```bash
+cd /home/hzp/backup
+./e2b-get-traffic-token-2.34.0.sh '<sandbox-id>'
+```
+
+该 token 属于敏感的短期数据面凭据，不要写入仓库、文档或 shell 脚本。若不希望它进入 shell history，使用上面的命令替换形式并及时 `unset TRAFFIC_ACCESS_TOKEN`。
 
 ## 在 Sandbox 中配置 OpenClaw
 
@@ -244,4 +260,4 @@ docker push \
   swr.cn-south-1.myhuaweicloud.com/demo-test/openclaw:2026.5.28-envd-http-v1
 ```
 
-使用该镜像在 AgentSphere 创建 Template 后，再通过本目录的 `e2b_interactive_tty.py` 创建 Sandbox 并完成 OpenClaw 模型配置。
+使用该镜像在 AgentSphere 创建 Template 和 Sandbox 后，再通过本目录的 `e2b_interactive_tty.py` 连接 Sandbox 并完成 OpenClaw 模型配置。
