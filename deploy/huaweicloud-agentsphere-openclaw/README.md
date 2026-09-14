@@ -3,7 +3,7 @@
 本目录用于配套 Huawei Cloud AgentSphere E2B-compatible Sandbox，包含：
 
 - 连接已有 Sandbox 并打开交互终端的 `e2b_interactive_tty.py`；
-- 单独刷新并输出 traffic access token 的 `get_traffic_access_token.py`；
+- 通过相邻的 `../huaweicloud-agentsphere-deepseek-harness/` 目录刷新并输出 traffic access token；
 - 已推送镜像的可复现 Dockerfile、entrypoint 和最小 OpenClaw 配置；
 - 进入 Sandbox 后配置 OpenClaw 模型，以及通过 `18789` 访问基础 API 的方法。
 
@@ -129,13 +129,13 @@ cd /home/hzp/backup
 
 ```bash
 export E2B_API_KEY='<your-e2b-api-key>'
-python get_traffic_access_token.py '<sandbox-id>'
+python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>'
 ```
 
 脚本只向 stdout 输出 token，适合直接赋值：
 
 ```bash
-TRAFFIC_ACCESS_TOKEN="$(python get_traffic_access_token.py '<sandbox-id>')"
+TRAFFIC_ACCESS_TOKEN="$(python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>')"
 ```
 
 节点上使用配套包装脚本：
