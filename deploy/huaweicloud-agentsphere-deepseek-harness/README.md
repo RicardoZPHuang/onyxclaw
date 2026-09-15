@@ -118,7 +118,7 @@ https://agent-gateway-90is-gztggnjthe.agentgateway.cn-south-1.huaweicloud-agentn
 
 `20260913-v4` 依赖浏览器保存并回传这枚 Cookie。节点上已构建 `20260915-v5` 修订版：它在容器内缓存 launch-token 交换得到的 DSH 会话，并自动注入所有上游 HTTP 和 WebSocket 请求。推送该标签并更新 Template 后，浏览器仍需提供三项 AgentSphere 路由 header，但不再承担 DSH Cookie 的传递。
 
-如果服务端检查正常，但 Windows Chrome 仍持续重连，可以改用 [Windows 本地桥接](./windows-local-bridge/README.md)。桥接在本机统一转发 HTTP 和 WebSocket 并增加路由 header，Chrome 只访问 `http://127.0.0.1:13080`；使用桥接时应暂停 ModHeader 和其他 AgentSphere header 扩展。
+如果服务端检查正常，但 Windows Chrome 的 `remote.mux` 只显示“已完成”、没有状态码和 Frames，说明 WebSocket Upgrade 没有完成。停用 ModHeader，改用本目录的专用扩展；扩展弹窗会对 `ws://` 和 `wss://` 两种 `/api/remote.mux` 请求执行规则匹配自检。若专用扩展自检通过后仍没有 `101`，在 `chrome://net-export/` 使用默认选项采集一次复现日志，以便确认请求是在 Chrome、扩展还是网关阶段终止。
 
 ### 5. 配置 DeepSeek 模型密钥
 

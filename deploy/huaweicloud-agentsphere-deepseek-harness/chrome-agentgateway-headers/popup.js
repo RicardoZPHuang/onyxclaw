@@ -1,8 +1,10 @@
-const RULE_ID = 1;
+const HTTP_RULE_ID = 1;
+const WEBSOCKET_RULE_ID = 2;
+const RULE_IDS = [HTTP_RULE_ID, WEBSOCKET_RULE_ID];
 const STORAGE_KEY = "agentSphereGatewayConfig";
 const ALLOWED_DOMAIN_SUFFIX = ".huaweicloud-agentnetwork.com";
 
-const RESOURCE_TYPES = [
+const HTTP_RESOURCE_TYPES = [
   "main_frame",
   "sub_frame",
   "stylesheet",
@@ -14,7 +16,6 @@ const RESOURCE_TYPES = [
   "ping",
   "csp_report",
   "media",
-  "websocket",
   "webbundle",
   "other"
 ];
@@ -58,27 +59,76 @@ function normalizeConfig() {
   };
 }
 
-function buildRule(config) {
-  return {
-    id: RULE_ID,
-    priority: 1,
-    action: {
-      type: "modifyHeaders",
-      requestHeaders: [
-        { header: "E2b-Sandbox-Id", operation: "set", value: config.sandboxId },
-        { header: "E2b-Sandbox-Port", operation: "set", value: config.port },
-        {
-          header: "E2B-Traffic-Access-Token",
-          operation: "set",
-          value: config.trafficToken
-        }
-      ]
-    },
-    condition: {
-      urlFilter: `||${config.hostname}/`,
-      resourceTypes: RESOURCE_TYPES
+function routeHeaders(config) {
+  return [
+    { header: "E2b-Sandbox-Id", operation: "set", value: config.sandboxId },
+    { header: "E2b-Sandbox-Port", operation: "set", value: config.port },
+    {
+      header: "E2B-Traffic-Access-Token",
+      operation: "set",
+      value: config.trafficToken
     }
+  ];
+}
+
+function buildRules(config) {
+  const condition = {
+    urlFilter: `||${config.hostname}/`
   };
+  return [
+    {
+      id: HTTP_RULE_ID,
+      priority: 1,
+      action: {
+        type: "modifyHeaders",
+        requestHeaders: routeHeaders(config)
+      },
+      condition: {
+        ...condition,
+        resourceTypes: HTTP_RESOURCE_TYPES
+      }
+    },
+    {
+      id: WEBSOCKET_RULE_ID,
+      priority: 2,
+      action: {
+        type: "modifyHeaders",
+        requestHeaders: routeHeaders(config)
+      },
+      condition: {
+        ...condition,
+        resourceTypes: ["websocket"]
+      }
+    }
+  ];
+}
+
+async function verifyWebSocketRule(config) {
+  const urls = [
+    `ws://${config.hostname}/api/remote.mux`,
+    `wss://${config.hostname}/api/remote.mux`
+  ];
+  const results = await Promise.all(urls.map((url) => (
+    chrome.declarativeNetRequest.testMatchOutcome({
+      url,
+      type: "websocket",
+      initiator: config.gatewayUrl
+    })
+  )));
+  return results.every((result) => (
+    result.matchedRules.some((match) => match.ruleId === WEBSOCKET_RULE_ID)
+  ));
+}
+
+async function saveRules(config) {
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: RULE_IDS,
+    addRules: buildRules(config)
+  });
+  if (!(await verifyWebSocketRule(config))) {
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: RULE_IDS });
+    throw new Error("WebSocket 路由规则自检失败");
+  }
 }
 
 async function showEnabledState(enabled, message) {
@@ -92,10 +142,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     const config = normalizeConfig();
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [RULE_ID],
-      addRules: [buildRule(config)]
-    });
+    await saveRules(config);
     await chrome.storage.local.set({ [STORAGE_KEY]: config });
     await showEnabledState(true, "已启用：页面、API 和 WebSocket 请求都会携带路由 Header");
   } catch (error) {
@@ -104,12 +151,12 @@ form.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("#disable").addEventListener("click", async () => {
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [RULE_ID] });
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: RULE_IDS });
   await showEnabledState(false, "规则已停用，配置仍保存在本机");
 });
 
 document.querySelector("#clear").addEventListener("click", async () => {
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [RULE_ID] });
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: RULE_IDS });
   await chrome.storage.local.remove(STORAGE_KEY);
   form.reset();
   portInput.value = "3080";
@@ -135,8 +182,12 @@ async function initialize() {
     tokenInput.value = config.trafficToken ?? "";
   }
   const rules = await chrome.declarativeNetRequest.getDynamicRules();
-  const enabled = rules.some((rule) => rule.id === RULE_ID);
-  await showEnabledState(enabled, enabled ? "规则已启用" : "请填写配置并启用规则");
+  const enabled = RULE_IDS.every((id) => rules.some((rule) => rule.id === id));
+  const websocketReady = enabled && config ? await verifyWebSocketRule(config) : false;
+  await showEnabledState(
+    websocketReady,
+    websocketReady ? "HTTP 与 WebSocket 规则均已启用并通过自检" : "请填写配置并启用规则"
+  );
 }
 
 initialize().catch((error) => {
