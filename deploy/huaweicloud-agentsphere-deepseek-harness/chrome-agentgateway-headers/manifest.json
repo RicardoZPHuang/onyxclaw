@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "AgentSphere Gateway Headers",
+  "version": "1.0.0",
+  "description": "Adds AgentSphere Sandbox routing headers to HTTPS and WebSocket requests.",
+  "minimum_chrome_version": "101",
+  "permissions": [
+    "declarativeNetRequestWithHostAccess",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.huaweicloud-agentnetwork.com/*"
+  ],
+  "action": {
+    "default_title": "AgentSphere Gateway Headers",
+    "default_popup": "popup.html"
+  }
+}

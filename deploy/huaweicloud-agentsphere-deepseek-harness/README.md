@@ -59,7 +59,20 @@ PROXY_PASSWORD=<your-password>
 
 如果没有从浏览器 Network 面板保存 token，也可以通过本目录的脚本重新获取，参见后面的“traffic access token 工具”章节。
 
-### 3. 在 Chrome 中安装并配置 ModHeader
+### 3. 配置 Chrome 请求头扩展
+
+Windows Chrome 建议使用本目录提供的 [AgentSphere Gateway Headers 专用扩展](./chrome-agentgateway-headers/README.md)。它使用 Manifest V3 `declarativeNetRequest`，明确覆盖 `websocket` 资源类型，可以同时给页面、API 和 `/api/remote.mux` WebSocket 握手增加三项 header。
+
+安装步骤：
+
+1. 把 `chrome-agentgateway-headers` 文件夹复制到 Windows；
+2. 打开 `chrome://extensions/` 并启用“开发者模式”；
+3. 点击“加载已解压的扩展程序”，选择该文件夹；
+4. 打开扩展，填写 Gateway URL、Sandbox ID、端口 `3080` 和 traffic access token；
+5. 点击“保存并启用”，确认扩展图标显示 `ON`；
+6. 暂停 ModHeader 中针对同一 Gateway 的旧配置，避免两个扩展争用同名 header。
+
+也可以继续使用确认能修改 WebSocket 握手的 header 工具。需要增加的请求头为：
 
 从 Chrome 网上应用店安装 **ModHeader** 扩展。新建一个只对 Agent Gateway 地址生效的配置，增加以下三个请求头：
 
@@ -69,7 +82,7 @@ PROXY_PASSWORD=<your-password>
 | `E2b-Sandbox-Port` | `3080` |
 | `E2B-Traffic-Access-Token` | 创建成功响应中的 `traffic_access_token` |
 
-请确认三项 header 都已启用，并将 ModHeader 的 URL filter 限定到当前 Agent Gateway 域名，避免把 Sandbox 凭据发送到其他网站。
+请确认三项 header 对 HTTPS 和 WSS 请求都生效。只匹配 `https://` 的 URL filter 可能漏掉 `wss://.../api/remote.mux`，表现为页面和静态资源能打开，但模型列表一直加载。
 
 ### 4. 访问 DeepSeek Harness
 
@@ -90,6 +103,7 @@ https://agent-gateway-90is-gztggnjthe.agentgateway.cn-south-1.huaweicloud-agentn
 3. `E2b-Sandbox-Port` 是否为 UI 端口 `3080`，而不是健康检查端口 `49983` 或内部 DSH 端口 `3079`；
 4. Sandbox ID 和 traffic access token 是否来自同一次创建或最近一次 connect 响应；
 5. 三个 header 的名称和值是否包含多余空格。
+6. Network 的 WS 分类中 `/api/remote.mux` 是否返回 `101`；如果返回 `Session not found`，检查 WebSocket 握手是否携带三项 header。
 
 ### 5. 配置 DeepSeek 模型密钥
 
@@ -139,5 +153,6 @@ export E2B_API_KEY='<your-e2b-api-key>'
 - `get_traffic_access_token.py`：刷新并输出指定 Sandbox 的 traffic access token；
 - `e2b-get-traffic-token-2.34.0.sh`：使用 `e2b-sdk-tools:2.34.0` 运行 token 工具；
 - `requirements.txt`：本地运行 Python 工具所需的 E2B SDK 版本。
+- `chrome-agentgateway-headers/`：Windows Chrome 专用的 Agent Gateway HTTP + WebSocket header 扩展；
 
 需要了解镜像内部实现或在其他机器上重新构建时，参阅[镜像实现说明](./DEEPSEEK_HARNESS_AGENTSPHERE_IMAGE.md)。

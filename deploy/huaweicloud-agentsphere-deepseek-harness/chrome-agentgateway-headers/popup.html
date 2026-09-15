@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AgentSphere Gateway Headers</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>AgentSphere Gateway</h1>
+      <p class="hint">同时为页面、API 和 WebSocket 握手添加 Sandbox 路由请求头。</p>
+
+      <form id="config-form">
+        <label>
+          Gateway URL
+          <input id="gateway-url" type="url" required spellcheck="false"
+            placeholder="https://agent-gateway-....huaweicloud-agentnetwork.com">
+        </label>
+        <label>
+          Sandbox ID
+          <input id="sandbox-id" type="text" required autocomplete="off" spellcheck="false">
+        </label>
+        <label>
+          Sandbox Port
+          <input id="sandbox-port" type="number" required min="1" max="65535" value="3080">
+        </label>
+        <label>
+          Traffic Access Token
+          <input id="traffic-token" type="password" required autocomplete="off" spellcheck="false">
+        </label>
+
+        <div class="actions">
+          <button type="submit" class="primary">保存并启用</button>
+          <button id="disable" type="button">停用</button>
+          <button id="clear" type="button">清除</button>
+        </div>
+      </form>
+
+      <p id="status" role="status" aria-live="polite"></p>
+      <button id="open-gateway" type="button" class="wide" disabled>打开 Gateway</button>
+      <p class="security">配置仅保存在当前 Chrome 的扩展本地存储中。清除后会同时删除动态规则和凭据。</p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
