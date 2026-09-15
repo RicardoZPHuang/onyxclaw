@@ -118,6 +118,8 @@ https://agent-gateway-90is-gztggnjthe.agentgateway.cn-south-1.huaweicloud-agentn
 
 `20260913-v4` 依赖浏览器保存并回传这枚 Cookie。节点上已构建 `20260915-v5` 修订版：它在容器内缓存 launch-token 交换得到的 DSH 会话，并自动注入所有上游 HTTP 和 WebSocket 请求。推送该标签并更新 Template 后，浏览器仍需提供三项 AgentSphere 路由 header，但不再承担 DSH Cookie 的传递。
 
+如果服务端检查正常，但 Windows Chrome 仍持续重连，可以改用 [Windows 本地桥接](./windows-local-bridge/README.md)。桥接在本机统一转发 HTTP 和 WebSocket 并增加路由 header，Chrome 只访问 `http://127.0.0.1:13080`；使用桥接时应暂停 ModHeader 和其他 AgentSphere header 扩展。
+
 ### 5. 配置 DeepSeek 模型密钥
 
 首次进入 DeepSeek Harness 后，需要在设置界面配置 DeepSeek 模型凭据：
@@ -167,5 +169,6 @@ export E2B_API_KEY='<your-e2b-api-key>'
 - `e2b-get-traffic-token-2.34.0.sh`：使用 `e2b-sdk-tools:2.34.0` 运行 token 工具；
 - `requirements.txt`：本地运行 Python 工具所需的 E2B SDK 版本。
 - `chrome-agentgateway-headers/`：Windows Chrome 专用的 Agent Gateway HTTP + WebSocket header 扩展；
+- `windows-local-bridge/`：绕开 Chrome 扩展、统一代理 HTTP 与 WebSocket 的 Windows 本地桥接；
 
 需要了解镜像内部实现或在其他机器上重新构建时，参阅[镜像实现说明](./DEEPSEEK_HARNESS_AGENTSPHERE_IMAGE.md)。

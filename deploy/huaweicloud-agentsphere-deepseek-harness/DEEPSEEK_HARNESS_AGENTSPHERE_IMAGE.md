@@ -211,6 +211,16 @@ sha256:faadcf7e2137afdf67c037b3e426d7b32e2253fd4d03f3d3d892e8caf05b6e70
 
 该标签目前是节点本地构建产物。推送 SWR 并让 Template 使用新标签后，新的 Sandbox 才会包含此修复。
 
+对使用该镜像创建的 Sandbox `db970fd8eb4030f2bc9b0775e82de89a539a07639302c9008f6a1f1522074c37` 复核结果：
+
+- 容器内 `proxy/index.js` 和 `proxy/upstream-token.js` 的 SHA-256 与 v5 构建源一致；
+- `/api/session/modelCatalog` 在有、无浏览器 Cookie 两种条件下均返回 `200` 和完整 DeepSeek 模型目录；
+- 三个客户端插件组合包均返回 `200`；
+- `/api/remote.mux` 在不带浏览器 Cookie 时收到 `$events.ready`；
+- WebSocket 保持 12 秒期间持续收到两秒一次的 Ping，同一连接随后可再次打开 `$events` 并收到 `ready`。
+
+这些检查通过时，容器、Agent Gateway 路由、模型目录以及 WebSocket 心跳链路均正常。如果 Windows Chrome 仍显示加载，应检查该浏览器中的握手状态、扩展冲突和 Profile 状态，或者使用 `windows-local-bridge/` 绕开扩展层。
+
 ## 9. 本次产物
 
 - 镜像：`deepseek-harness-envd:source-20260913-headlesssettingsfix`

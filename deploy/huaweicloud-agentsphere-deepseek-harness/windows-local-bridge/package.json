@@ -1,0 +1,9 @@
+{
+  "name": "agentsphere-deepseek-harness-local-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local HTTP and WebSocket bridge for AgentSphere DeepSeek Harness",
+  "dependencies": {
+    "http-proxy": "1.18.1"
+  }
+}
