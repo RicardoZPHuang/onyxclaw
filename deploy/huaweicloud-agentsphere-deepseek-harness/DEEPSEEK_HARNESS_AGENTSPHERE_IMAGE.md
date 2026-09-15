@@ -97,13 +97,14 @@ AgentSphere 的访问链路为：
 代理做了以下兼容处理：
 
 1. **Launch token 自动交换会话**：从 DSH 启动日志提取 launch token，仅在首页首次返回 401 时用 query 参数交换 session cookie。代理内部消费同源 303 跳转并返回最终页面，避免 Agent Gateway 丢失跳转过程中的 Cookie 后产生 `stopped after 10 redirects`。
-2. **HTTP 与 WebSocket 同源对齐**：把浏览器的 `Origin` 改为 DSH 实际看到的 `http://127.0.0.1:3079`，通过 DSH 的同源检查。
-3. **压缩响应改写**：支持 identity、gzip、deflate 和 Brotli；先解压 HTML/JavaScript，注入或改写后再按原编码压缩返回。
-4. **`crypto.randomUUID` 兼容**：非 HTTPS 的普通主机名环境可能没有 `crypto.randomUUID`，页面注入基于 `getRandomValues` 的实现，保证 RPC ID 和实时连接正常生成。
-5. **设置能力开放**：代理将前端的 loopback 主机判断改写为可用，使通过网关访问时仍显示设置入口。
-6. **按沙箱隔离浏览器状态**：AgentSphere 多个沙箱共用固定网关 origin。代理按容器 `HOSTNAME` 生成实例标记；检测到沙箱变化时清理旧的 localStorage 和 sessionStorage，避免复用前一个沙箱的模型和插件状态。
-7. **可选 Basic Auth**：只有 `PROXY_USERNAME` 和 `PROXY_PASSWORD` 同时设置时才启用；不设置时没有默认账号或默认密码。
-8. **故障兜底**：DSH 未启动或退出时 HTTP 返回 502，WebSocket 连接关闭，同时保留可诊断日志，避免代理进程因未捕获错误退出。
+2. **DSH 会话在代理内复用**：代理保存 launch-token 交换得到的 `dsh-auth-*` 会话，并在转发每个 HTTP 和 WebSocket 请求前注入上游 Cookie。这样即使浏览器或 Windows 扩展没有在 `remote.mux` 握手中回传 DSH Cookie，模型实时通道仍能完成认证。代理会移除请求中的同名旧 Cookie，再使用当前容器刚获得的会话，避免旧 Sandbox 会话污染。
+3. **HTTP 与 WebSocket 同源对齐**：把浏览器的 `Origin` 改为 DSH 实际看到的 `http://127.0.0.1:3079`，通过 DSH 的同源检查。
+4. **压缩响应改写**：支持 identity、gzip、deflate 和 Brotli；先解压 HTML/JavaScript，注入或改写后再按原编码压缩返回。
+5. **`crypto.randomUUID` 兼容**：非 HTTPS 的普通主机名环境可能没有 `crypto.randomUUID`，页面注入基于 `getRandomValues` 的实现，保证 RPC ID 和实时连接正常生成。
+6. **设置能力开放**：代理将前端的 loopback 主机判断改写为可用，使通过网关访问时仍显示设置入口。
+7. **按沙箱隔离浏览器状态**：AgentSphere 多个沙箱共用固定网关 origin。代理按容器 `HOSTNAME` 生成实例标记；检测到沙箱变化时清理旧的 localStorage 和 sessionStorage，避免复用前一个沙箱的模型和插件状态。
+8. **可选 Basic Auth**：只有 `PROXY_USERNAME` 和 `PROXY_PASSWORD` 同时设置时才启用；不设置时没有默认账号或默认密码。
+9. **故障兜底**：DSH 未启动或退出时 HTTP 返回 502，WebSocket 连接关闭，同时保留可诊断日志，避免代理进程因未捕获错误退出。
 
 ## 5. 文件和工作区目录规划
 
@@ -199,6 +200,16 @@ sha256sum /home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260913-h
 - 经 3080 代理完成 DSH launch token 到 session cookie 的交换；
 - `settings/openSettingsDocument` RPC 在无桌面容器内返回 `opened: false`、文件路径和完整内容；
 - 返回内容与容器内测试设置文档逐字一致。
+- 对同一套 DSH 服务进行 WebSocket 对照验证：旧代理在不携带浏览器 Cookie 时以 `1006` 失败；修复版在同样不携带 Cookie 的条件下收到 `$events` 的 `ready` 消息，并以 `1000` 正常关闭。
+
+2026-09-15 在构建节点生成了包含代理会话复用修复的候选镜像：
+
+```text
+deepseek-harness-envd:source-20260915-ws-sessionfix
+sha256:faadcf7e2137afdf67c037b3e426d7b32e2253fd4d03f3d3d892e8caf05b6e70
+```
+
+该标签目前是节点本地构建产物。推送 SWR 并让 Template 使用新标签后，新的 Sandbox 才会包含此修复。
 
 ## 9. 本次产物
 

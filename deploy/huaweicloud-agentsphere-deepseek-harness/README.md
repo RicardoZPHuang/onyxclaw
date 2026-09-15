@@ -105,6 +105,19 @@ https://agent-gateway-90is-gztggnjthe.agentgateway.cn-south-1.huaweicloud-agentn
 5. 三个 header 的名称和值是否包含多余空格。
 6. Network 的 WS 分类中 `/api/remote.mux` 是否返回 `101`；如果返回 `Session not found`，检查 WebSocket 握手是否携带三项 header。
 
+### 模型列表持续加载或 `remote.mux` 反复重连
+
+三个 AgentSphere 路由 header 都存在，只能证明网关已经把请求路由到目标 Sandbox。DSH 自身还有一层 `dsh-auth-*` 会话认证：浏览器首次打开 `/` 时，代理用 launch token 换取该会话，后续 HTTP API 和 `/api/remote.mux` WebSocket 都必须携带它。
+
+在 Chrome DevTools 中按下面顺序检查：
+
+1. 在 Network 的 WS 分类中打开 `/api/remote.mux`，确认握手状态是 `101 Switching Protocols`。WebSocket 成功握手本来就没有普通 HTTP Response Body，应在 Messages/Frames 中看到包含 `ready` 的消息。
+2. 查看该握手的 Request Headers，确认三项 AgentSphere header 都存在，并检查浏览器是否同时发送了名称以 `dsh-auth-` 开头的 Cookie。
+3. 在 Application -> Storage -> Cookies 中检查当前 Gateway 域名下是否存在 `dsh-auth-*`。如果没有或疑似来自旧 Sandbox，关闭该 Gateway 的全部标签页，清除该域名的站点数据，再从 `/` 重新进入一次。
+4. 如果握手返回 `500`，响应类似 `[node-proxy] Failed to handle WebSocket: webSocket handshake failed`，而三项路由 header 均存在，通常就是 DSH 会话 Cookie 缺失或失效。
+
+`20260913-v4` 依赖浏览器保存并回传这枚 Cookie。节点上已构建 `20260915-v5` 修订版：它在容器内缓存 launch-token 交换得到的 DSH 会话，并自动注入所有上游 HTTP 和 WebSocket 请求。推送该标签并更新 Template 后，浏览器仍需提供三项 AgentSphere 路由 header，但不再承担 DSH Cookie 的传递。
+
 ### 5. 配置 DeepSeek 模型密钥
 
 首次进入 DeepSeek Harness 后，需要在设置界面配置 DeepSeek 模型凭据：
