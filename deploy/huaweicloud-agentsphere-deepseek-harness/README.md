@@ -5,7 +5,7 @@
 公开镜像：
 
 ```text
-swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260913-v4
+swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260915-v5
 ```
 
 端口用途：
@@ -24,7 +24,7 @@ swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260913-v4
 
 | 配置项 | 值 |
 | --- | --- |
-| 容器镜像 | `swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260913-v4` |
+| 容器镜像 | `swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260915-v5` |
 | CPU | `2U` |
 | 内存 | `8 GiB` |
 | 出站网关 | 纯公网 |
@@ -61,19 +61,6 @@ PROXY_PASSWORD=<your-password>
 
 ### 3. 配置 Chrome 请求头扩展
 
-Windows Chrome 建议使用本目录提供的 [AgentSphere Gateway Headers 专用扩展](./chrome-agentgateway-headers/README.md)。它使用 Manifest V3 `declarativeNetRequest`，明确覆盖 `websocket` 资源类型，可以同时给页面、API 和 `/api/remote.mux` WebSocket 握手增加三项 header。
-
-安装步骤：
-
-1. 把 `chrome-agentgateway-headers` 文件夹复制到 Windows；
-2. 打开 `chrome://extensions/` 并启用“开发者模式”；
-3. 点击“加载已解压的扩展程序”，选择该文件夹；
-4. 打开扩展，填写 Gateway URL、Sandbox ID、端口 `3080` 和 traffic access token；
-5. 点击“保存并启用”，确认扩展图标显示 `ON`；
-6. 暂停 ModHeader 中针对同一 Gateway 的旧配置，避免两个扩展争用同名 header。
-
-也可以继续使用确认能修改 WebSocket 握手的 header 工具。需要增加的请求头为：
-
 从 Chrome 网上应用店安装 **ModHeader** 扩展。新建一个只对 Agent Gateway 地址生效的配置，增加以下三个请求头：
 
 | Header | Value |
@@ -107,18 +94,18 @@ https://agent-gateway-90is-gztggnjthe.agentgateway.cn-south-1.huaweicloud-agentn
 
 ### 模型列表持续加载或 `remote.mux` 反复重连
 
-三个 AgentSphere 路由 header 都存在，只能证明网关已经把请求路由到目标 Sandbox。DSH 自身还有一层 `dsh-auth-*` 会话认证：浏览器首次打开 `/` 时，代理用 launch token 换取该会话，后续 HTTP API 和 `/api/remote.mux` WebSocket 都必须携带它。
+三个 AgentSphere 路由 header 都存在，只能证明网关已经把请求路由到目标 Sandbox。DSH 自身还有一层 `dsh-auth-*` 会话认证：浏览器首次打开 `/` 时，v5 代理用 launch token 换取会话，并在容器内部为后续 HTTP API 和 `/api/remote.mux` WebSocket 注入该会话。
 
 在 Chrome DevTools 中按下面顺序检查：
 
 1. 在 Network 的 WS 分类中打开 `/api/remote.mux`，确认握手状态是 `101 Switching Protocols`。WebSocket 成功握手本来就没有普通 HTTP Response Body，应在 Messages/Frames 中看到包含 `ready` 的消息。
-2. 查看该握手的 Request Headers，确认三项 AgentSphere header 都存在，并检查浏览器是否同时发送了名称以 `dsh-auth-` 开头的 Cookie。
-3. 在 Application -> Storage -> Cookies 中检查当前 Gateway 域名下是否存在 `dsh-auth-*`。如果没有或疑似来自旧 Sandbox，关闭该 Gateway 的全部标签页，清除该域名的站点数据，再从 `/` 重新进入一次。
-4. 如果握手返回 `500`，响应类似 `[node-proxy] Failed to handle WebSocket: webSocket handshake failed`，而三项路由 header 均存在，通常就是 DSH 会话 Cookie 缺失或失效。
+2. 查看该握手的 Request Headers，确认 ModHeader 注入的三项 AgentSphere header 都存在。v5 由容器代理管理 DSH 会话，因此浏览器没有 `dsh-auth-*` Cookie 也可以工作。
+3. 如果页面疑似保留了旧 Sandbox 状态，关闭该 Gateway 的全部标签页，清除该域名的站点数据，再从 `/` 重新进入一次。
+4. 如果握手返回 `500`，响应类似 `[node-proxy] Failed to handle WebSocket: webSocket handshake failed`，检查容器日志中代理是否成功保存 DSH 会话，以及 DSH 进程是否仍在运行。
 
-`20260913-v4` 依赖浏览器保存并回传这枚 Cookie。节点上已构建 `20260915-v5` 修订版：它在容器内缓存 launch-token 交换得到的 DSH 会话，并自动注入所有上游 HTTP 和 WebSocket 请求。推送该标签并更新 Template 后，浏览器仍需提供三项 AgentSphere 路由 header，但不再承担 DSH Cookie 的传递。
+`20260915-v5` 在容器代理内缓存 launch-token 交换得到的 DSH 会话，并自动注入所有上游 HTTP 和 WebSocket 请求。浏览器仍需通过 ModHeader 提供三项 AgentSphere 路由 header，但不再承担 DSH Cookie 的传递。
 
-如果服务端检查正常，但 Windows Chrome 的 `remote.mux` 只显示“已完成”、没有状态码和 Frames，说明 WebSocket Upgrade 没有完成。停用 ModHeader，改用本目录的专用扩展；扩展弹窗会对 `ws://` 和 `wss://` 两种 `/api/remote.mux` 请求执行规则匹配自检。若专用扩展自检通过后仍没有 `101`，在 `chrome://net-export/` 使用默认选项采集一次复现日志，以便确认请求是在 Chrome、扩展还是网关阶段终止。
+如果服务端检查正常，但 Windows Chrome 的 `remote.mux` 只显示“已完成”、没有状态码和 Frames，说明 WebSocket Upgrade 没有完成。检查 ModHeader 是否把三项 header 应用到了 WSS 请求，并检查 Windows 系统代理或安全软件是否拦截 WebSocket；需要进一步定位时，可在 `chrome://net-export/` 使用默认隐私选项采集复现日志。
 
 ### 5. 配置 DeepSeek 模型密钥
 
@@ -168,7 +155,5 @@ export E2B_API_KEY='<your-e2b-api-key>'
 - `get_traffic_access_token.py`：刷新并输出指定 Sandbox 的 traffic access token；
 - `e2b-get-traffic-token-2.34.0.sh`：使用 `e2b-sdk-tools:2.34.0` 运行 token 工具；
 - `requirements.txt`：本地运行 Python 工具所需的 E2B SDK 版本。
-- `chrome-agentgateway-headers/`：Windows Chrome 专用的 Agent Gateway HTTP + WebSocket header 扩展；
-- `windows-local-bridge/`：绕开 Chrome 扩展、统一代理 HTTP 与 WebSocket 的 Windows 本地桥接；
 
 需要了解镜像内部实现或在其他机器上重新构建时，参阅[镜像实现说明](./DEEPSEEK_HARNESS_AGENTSPHERE_IMAGE.md)。

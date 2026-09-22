@@ -9,7 +9,7 @@
 - `envd` 服务，供沙箱生命周期和执行环境访问；
 - 无桌面 Linux 容器中的配置文件查看能力。
 
-DSH 源码基线提交为 `c291e7961a515f6d7af9304e7fd1d257929aef26`。镜像标签为 `deepseek-harness-envd:source-20260913-headlesssettingsfix`。
+DSH 源码基线提交为 `c291e7961a515f6d7af9304e7fd1d257929aef26`。对应 AgentSphere 镜像为 `swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260915-v5`。
 
 ## 2. Dockerfile 整体逻辑
 
@@ -151,7 +151,7 @@ docker run -d \
   -p 49983:49983 \
   -v dsh-state:/root/.dsh \
   -v dsh-workspace:/workspace \
-  deepseek-harness-envd:source-20260913-headlesssettingsfix
+  deepseek-harness-envd:source-20260915-ws-sessionfix
 ```
 
 启用代理 Basic Auth：
@@ -166,7 +166,7 @@ docker run -d \
   -e PROXY_PASSWORD='your-password' \
   -v dsh-state:/root/.dsh \
   -v dsh-workspace:/workspace \
-  deepseek-harness-envd:source-20260913-headlesssettingsfix
+  deepseek-harness-envd:source-20260915-ws-sessionfix
 ```
 
 AgentSphere 模板通常直接使用镜像默认入口，不需要覆盖 `ENTRYPOINT` 或 `CMD`。对外选择容器端口 `3080`；`49983` 仅在需要直接调用 envd 时开放。
@@ -181,15 +181,15 @@ pnpm run build:lib:host
 pnpm --filter @deepseek-ai/dsh-client-ui-settings-general bundle
 
 cd /home/hzp/deepseek-image-build
-docker build -t deepseek-harness-envd:source-20260913-headlesssettingsfix .
+docker build -t deepseek-harness-envd:source-20260915-ws-sessionfix .
 ```
 
 导出镜像：
 
 ```bash
-docker save deepseek-harness-envd:source-20260913-headlesssettingsfix \
-  | gzip -1 > /home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260913-headlesssettingsfix.tar.gz
-sha256sum /home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260913-headlesssettingsfix.tar.gz
+docker save deepseek-harness-envd:source-20260915-ws-sessionfix \
+  | gzip -1 > /home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260915-ws-sessionfix.tar.gz
+sha256sum /home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260915-ws-sessionfix.tar.gz
 ```
 
 本次验证覆盖：
@@ -209,7 +209,7 @@ deepseek-harness-envd:source-20260915-ws-sessionfix
 sha256:faadcf7e2137afdf67c037b3e426d7b32e2253fd4d03f3d3d892e8caf05b6e70
 ```
 
-该标签目前是节点本地构建产物。推送 SWR 并让 Template 使用新标签后，新的 Sandbox 才会包含此修复。
+该构建产物已作为 `20260915-v5` 发布到 SWR；AgentSphere Template 应直接使用 v5 标签。
 
 对使用该镜像创建的 Sandbox `db970fd8eb4030f2bc9b0775e82de89a539a07639302c9008f6a1f1522074c37` 复核结果：
 
@@ -219,18 +219,15 @@ sha256:faadcf7e2137afdf67c037b3e426d7b32e2253fd4d03f3d3d892e8caf05b6e70
 - `/api/remote.mux` 在不带浏览器 Cookie 时收到 `$events.ready`；
 - WebSocket 保持 12 秒期间持续收到两秒一次的 Ping，同一连接随后可再次打开 `$events` 并收到 `ready`。
 
-这些检查通过时，容器、Agent Gateway 路由、模型目录以及 WebSocket 心跳链路均正常。如果 Windows Chrome 仍显示加载，应检查该浏览器中的握手状态、扩展冲突和 Profile 状态，或者使用 `windows-local-bridge/` 绕开扩展层。
+这些检查通过时，容器、Agent Gateway 路由、模型目录以及 WebSocket 心跳链路均正常。如果 Windows Chrome 仍显示加载，应检查 ModHeader 的 WSS 请求头、浏览器 Profile、Windows 系统代理和安全软件。
 
 ## 9. 本次产物
 
-- 镜像：`deepseek-harness-envd:source-20260913-headlesssettingsfix`
-- 镜像 ID：`sha256:722a6dba8dcc0e1b5ccf93e8c443e695917bcc66409136fc60a1472b2de2692e`
-- 导出文件：`/home/hzp/deepseek-image-build/deepseek-harness-envd-source-20260913-headlesssettingsfix.tar.gz`
-- 导出文件大小：`1101171908` 字节
-- 导出文件 SHA-256：`4c8f4532948e32d311b307148943ff8c83ec1c2bc54160ed8e9ac9914d67399d`
+- 本地镜像：`deepseek-harness-envd:source-20260915-ws-sessionfix`
+- 镜像 ID：`sha256:faadcf7e2137afdf67c037b3e426d7b32e2253fd4d03f3d3d892e8caf05b6e70`
 
 已公开发布到 SWR：
 
 ```text
-swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260913-v4
+swr.cn-south-1.myhuaweicloud.com/demo-test/deepseek-harness-envd:20260915-v5
 ```
