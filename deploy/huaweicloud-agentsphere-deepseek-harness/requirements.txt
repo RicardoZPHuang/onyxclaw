@@ -1,1 +1,1 @@
-e2b==2.34.0
+# get_traffic_access_token.py uses only the Python 3.9+ standard library.

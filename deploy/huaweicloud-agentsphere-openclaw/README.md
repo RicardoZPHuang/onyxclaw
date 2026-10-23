@@ -129,20 +129,20 @@ cd /home/hzp/backup
 
 ```bash
 export E2B_API_KEY='<your-e2b-api-key>'
-python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>'
+python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>' --format traffic
 ```
 
-脚本只向 stdout 输出 token，适合直接赋值：
+共享 token 工具现在默认输出 traffic/envd 两种 token 的 JSON；本节显式使用 `--format traffic` 保持只向 stdout 输出 traffic token，适合直接赋值：
 
 ```bash
-TRAFFIC_ACCESS_TOKEN="$(python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>')"
+TRAFFIC_ACCESS_TOKEN="$(python ../huaweicloud-agentsphere-deepseek-harness/get_traffic_access_token.py '<sandbox-id>' --format traffic)"
 ```
 
 节点上使用配套包装脚本：
 
 ```bash
 cd /home/hzp/backup
-./e2b-get-traffic-token-2.34.0.sh '<sandbox-id>'
+./e2b-get-traffic-token-2.34.0.sh '<sandbox-id>' --format traffic
 ```
 
 该 token 属于敏感的短期数据面凭据，不要写入仓库、文档或 shell 脚本。若不希望它进入 shell history，使用上面的命令替换形式并及时 `unset TRAFFIC_ACCESS_TOKEN`。
