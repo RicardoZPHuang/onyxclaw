@@ -163,6 +163,18 @@ python e2b_interactive_tty.py '<sandbox-id>' 'https://<agent-gateway-host>' \
   --api-url 'https://agentsandbox.cn-north-4.myhuaweicloud.com'
 ```
 
+第一个位置参数 `'<sandbox-id>'` 填写控制台中**已有沙箱的 Sandbox ID**（API 响应中的 `sandboxID`）。第二个位置参数填写该沙箱对应的固定网关 URL。
+
+也可以用环境变量指定这两个值，运行时省略位置参数：
+
+```bash
+export E2B_SANDBOX_ID='<sandbox-id>'
+export E2B_SANDBOX_URL='https://<agent-gateway-host>'
+python e2b_interactive_tty.py --api-url 'https://agentsandbox.cn-north-4.myhuaweicloud.com'
+```
+
+同时设置位置参数和对应环境变量时，以位置参数为准。
+
 示例通过 `--api-url` 指定北京四区。Python 脚本内置的控制 API 仍是华南一区，也可用 `E2B_API_URL` 覆盖。按 Ctrl-] 关闭远端终端，保留沙箱。
 
 ## 从源码构建
