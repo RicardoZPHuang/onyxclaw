@@ -149,6 +149,22 @@ Linux 使用 `./bin/e2b-tty-linux-amd64`（ARM64 使用 `e2b-tty-linux-arm64`）
 
 网关仍须支持 HTTPS 长连接/流式响应。此工具与旧 Python 脚本一样不使用 WebSocket，因此不涉及浏览器 WS Header 注入。
 
+## Python 版
+
+[e2b_interactive_tty.py](e2b_interactive_tty.py) 使用 E2B Python SDK 连接已有沙箱。请在 Linux 或 macOS 的终端中使用 Python 3.10 或更高版本。
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install 'e2b==2.34.0'
+read -rsp 'E2B API key: ' E2B_API_KEY; echo
+export E2B_API_KEY
+python e2b_interactive_tty.py '<sandbox-id>' 'https://<agent-gateway-host>' \
+  --api-url 'https://agentsandbox.cn-north-4.myhuaweicloud.com'
+```
+
+示例通过 `--api-url` 指定北京四区。Python 脚本内置的控制 API 仍是华南一区，也可用 `E2B_API_URL` 覆盖。按 Ctrl-] 关闭远端终端，保留沙箱。
+
 ## 从源码构建
 
 构建机器需要 Go 1.24 或以上，第一次构建需要下载 `golang.org/x/term` 和 `golang.org/x/sys`。依赖编译进可执行文件，运行时无需下载。`go.mod` / `go.sum` 固定依赖版本。
